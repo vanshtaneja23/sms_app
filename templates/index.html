@@ -1,0 +1,513 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>SMS Spam Detector</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <style>
+      :root {
+        --bg: #0f172a; /* slate-900 */
+        --card: #0b1226cc; /* translucent card */
+        --text: #e5e7eb; /* gray-200 */
+        --muted: #94a3b8; /* slate-400 */
+        --primary: #6366f1; /* indigo */
+        --ring: #94a3b8;
+        --ham: #16a34a; /* green */
+        --spam: #ef4444; /* red */
+        --warn: #f59e0b; /* amber */
+        --chip: #1e293b; /* slate-800 */
+      }
+      @media (prefers-color-scheme: light) {
+        :root {
+          --bg: #f1f5f9;
+          --card: #ffffff;
+          --text: #0f172a;
+          --muted: #475569;
+          --ring: #cbd5e1;
+          --chip: #e2e8f0;
+        }
+      }
+      * {
+        box-sizing: border-box;
+      }
+      html,
+      body {
+        height: 100%;
+      }
+      body {
+        margin: 0;
+        font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto,
+          Arial, "Helvetica Neue", "Noto Sans", "Apple Color Emoji",
+          "Segoe UI Emoji";
+        color: var(--text);
+        background: radial-gradient(
+            1200px 800px at 10% -10%,
+            #1e293b 0%,
+            transparent 60%
+          ),
+          radial-gradient(1200px 800px at 110% 10%, #1d4ed8 0%, transparent 50%),
+          linear-gradient(180deg, var(--bg), #0b1020 60%);
+        display: grid;
+        place-items: center;
+        padding: 2rem 1rem;
+      }
+      .container {
+        width: 100%;
+        max-width: 860px;
+        background: var(--card);
+        backdrop-filter: blur(8px);
+        border: 1px solid #1f2a44;
+        border-radius: 18px;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.25);
+        padding: 1.2rem;
+      }
+      header {
+        display: flex;
+        align-items: center;
+        gap: 0.8rem;
+        padding: 0.6rem 1rem 1rem;
+        border-bottom: 1px dashed #1f2a44;
+      }
+      .logo {
+        width: 40px;
+        height: 40px;
+        border-radius: 12px;
+        display: grid;
+        place-items: center;
+        background: radial-gradient(circle at 30% 20%, #8b5cf6, #06b6d4);
+        box-shadow: 0 6px 16px rgba(99, 102, 241, 0.35);
+        font-weight: 700;
+      }
+      h1 {
+        margin: 0;
+        font-size: 1.35rem;
+        letter-spacing: 0.2px;
+      }
+      .sub {
+        color: var(--muted);
+        font-size: 0.9rem;
+      }
+
+      form {
+        padding: 1rem;
+      }
+
+      /* ====== CHANGES START (textarea text + caret + placeholder + selection) ====== */
+      textarea {
+        width: 100%;
+        min-height: 140px;
+        resize: vertical;
+        padding: 1rem 1rem 1.25rem 1rem;
+        border-radius: 14px;
+        border: 1px solid var(--ring);
+        outline: none;
+        font-size: 1rem;
+        line-height: 1.45;
+
+        /* your typed text color */
+        color: #ffffff !important;
+        -webkit-text-fill-color: #ffffff; /* Safari/iOS */
+        caret-color: #60a5fa; /* visible blinking caret (blue) */
+
+        background: linear-gradient(#0b1220, #0b1220) padding-box,
+          linear-gradient(180deg, #263249, #152038) border-box;
+      }
+      textarea::placeholder {
+        color: #94a3b8; /* lighter placeholder for contrast */
+        opacity: 1; /* ensure not too faint */
+      }
+      textarea::selection {
+        background: #2563eb; /* selection highlight */
+        color: #ffffff;
+      }
+      /* ====== CHANGES END ====== */
+
+      .actions {
+        display: flex;
+        gap: 0.6rem;
+        flex-wrap: wrap;
+        align-items: center;
+        margin-top: 0.8rem;
+      }
+      .btn {
+        border: 0;
+        border-radius: 12px;
+        padding: 0.75rem 1rem;
+        cursor: pointer;
+        font-weight: 600;
+        letter-spacing: 0.2px;
+        background: linear-gradient(180deg, #777df3, var(--primary));
+        color: white;
+        box-shadow: 0 8px 18px rgba(99, 102, 241, 0.35);
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+      }
+      .btn[disabled] {
+        opacity: 0.6;
+        cursor: not-allowed;
+      }
+      .btn-ghost {
+        background: var(--chip);
+        color: var(--text);
+        border: 1px solid #25304a;
+        box-shadow: none;
+      }
+      .chips {
+        display: flex;
+        gap: 0.5rem;
+        flex-wrap: wrap;
+        margin-top: 0.6rem;
+      }
+      .chip {
+        padding: 0.45rem 0.7rem;
+        font-size: 0.9rem;
+        border-radius: 999px;
+        background: var(--chip);
+        color: var(--muted);
+        border: 1px solid #23304a;
+        cursor: pointer;
+        user-select: none;
+      }
+      .chip:hover {
+        filter: brightness(1.05);
+      }
+
+      .error {
+        margin: 1rem 0 0;
+        color: #ffb4b4;
+        background: #3b0e0e63;
+        border: 1px solid #7a1c1c;
+        padding: 0.7rem 0.9rem;
+        border-radius: 10px;
+        font-weight: 600;
+      }
+
+      .result-card {
+        margin: 1rem 0 0;
+        padding: 1rem;
+        border-radius: 16px;
+        border: 1px solid #23304a;
+        background: linear-gradient(180deg, #0b1226, #0e1430);
+      }
+      .verdict {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 1rem;
+        flex-wrap: wrap;
+      }
+      .badge {
+        font-weight: 800;
+        font-size: 0.95rem;
+        padding: 0.45rem 0.7rem;
+        border-radius: 999px;
+        border: 1px solid #2b3758;
+        background: #121a36;
+        letter-spacing: 0.25px;
+      }
+      .is-ham {
+        color: #10b981;
+        border-color: #14532d;
+        background: #082414;
+      }
+      .is-spam {
+        color: #f43f5e;
+        border-color: #64111a;
+        background: #2a0d14;
+      }
+
+      .conf {
+        margin-top: 0.8rem;
+      }
+      .bar {
+        --p: 0%;
+        width: 100%;
+        height: 10px;
+        border-radius: 999px;
+        background: #1b2744;
+        overflow: hidden;
+        border: 1px solid #243255;
+      }
+      .bar > span {
+        display: block;
+        height: 100%;
+        width: var(--p);
+        background: linear-gradient(90deg, #f97316, #ef4444);
+      }
+      .kv {
+        display: grid;
+        grid-template-columns: 160px 1fr;
+        gap: 0.4rem 0.8rem;
+        margin-top: 0.75rem;
+        color: var(--muted);
+        font-size: 0.95rem;
+      }
+
+      .compare {
+        margin-top: 1rem;
+        border-top: 1px dashed #1f2a44;
+        padding-top: 1rem;
+      }
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 0.95rem;
+        overflow: hidden;
+        border-radius: 12px;
+        border: 1px solid #23304a;
+      }
+      th,
+      td {
+        padding: 0.6rem 0.7rem;
+        text-align: left;
+        border-bottom: 1px solid #1f2947;
+      }
+      th {
+        background: #0f1938;
+        color: #cbd5e1;
+      }
+      tr:last-child td {
+        border-bottom: none;
+      }
+      .t-badge {
+        padding: 0.2rem 0.5rem;
+        border-radius: 999px;
+        font-weight: 700;
+        font-size: 0.82rem;
+        display: inline-block;
+      }
+      .t-ham {
+        background: #062a13;
+        color: #10b981;
+        border: 1px solid #14532d;
+      }
+      .t-spam {
+        background: #2a0d14;
+        color: #f43f5e;
+        border: 1px solid #64111a;
+      }
+
+      footer {
+        padding: 1rem;
+        color: var(--muted);
+        font-size: 0.85rem;
+        text-align: center;
+      }
+      .tiny {
+        font-size: 0.82rem;
+      }
+
+      .spinner {
+        width: 16px;
+        height: 16px;
+        border-radius: 50%;
+        border: 2px solid rgba(255, 255, 255, 0.45);
+        border-top-color: #fff;
+        display: inline-block;
+        animation: spin 0.8s linear infinite;
+      }
+      @keyframes spin {
+        to {
+          transform: rotate(360deg);
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main class="container">
+      <header>
+        <div class="logo">AI</div>
+        <div>
+          <h1>SMS Spam Detector</h1>
+          <div class="sub">
+            Paste an SMS and get an instant verdict with confidence.
+          </div>
+        </div>
+      </header>
+
+      <form method="POST" action="/predict" id="form">
+        <div style="padding: 1rem; padding-top: 0.8rem">
+          <textarea
+            name="message"
+            id="message"
+            rows="6"
+            placeholder="Type or paste an SMS message..."
+          >
+{{ message or '' }}</textarea
+          >
+
+          <div class="actions">
+            <button class="btn" id="submitBtn" type="submit">
+              <span class="spinner" id="sp" style="display: none"></span>
+              <span id="btnText">Analyze</span>
+            </button>
+            <button class="btn btn-ghost" type="button" id="clearBtn">
+              Clear
+            </button>
+            {% if result %}<span class="tiny" aria-live="polite"
+              >Last analyzed just now.</span
+            >{% endif %}
+          </div>
+
+          <div class="chips">
+            <div
+              class="chip"
+              data-fill="Your debit will be suspended in 24h. Update info: reactivate.example"
+            >
+              Try: Bank alert
+            </div>
+            <div
+              class="chip"
+              data-fill="Package on hold. Pay $1.50 to release: post-fee.co"
+            >
+              Try: Delivery fee
+            </div>
+            <div class="chip" data-fill="Hey! Free after 6? Movie?">
+              Try: Casual ham
+            </div>
+            <div
+              class="chip"
+              data-fill="You qualify for a special rebate. Apply: benefit-claim.example"
+            >
+              Try: Tax refund
+            </div>
+          </div>
+
+          {% if error %}
+          <div class="error">{{ error }}</div>
+          {% endif %} {% if result %}
+          <section class="result-card" aria-live="polite">
+            <div class="verdict">
+              <div>
+                <div class="sub" style="margin-bottom: 0.25rem">Verdict</div>
+                <div
+                  class="badge {% if result|lower == 'spam' %}is-spam{% else %}is-ham{% endif %}"
+                >
+                  {{ result|title }}
+                </div>
+              </div>
+              {% if model_name %}
+              <div class="sub">
+                Model: <strong style="color: #e2e8f0">{{ model_name }}</strong>
+              </div>
+              {% endif %}
+            </div>
+
+            {% if proba is not none %}
+            <div class="conf">
+              <div class="sub" style="margin-bottom: 0.25rem">
+                Spam probability
+              </div>
+              {% set pct = (proba * 100) | round(2) %}
+              <div class="bar" style="--p: {{ pct }}%"><span></span></div>
+              <div class="kv">
+                <div>Probability:</div>
+                <div>
+                  <strong>{{ '%.2f'|format(proba) }}</strong> ({{ pct }}%)
+                </div>
+                <div>Threshold:</div>
+                <div>{{ threshold if threshold is defined else '0.50' }}</div>
+                {% if message %}
+                <div>Message length:</div>
+                <div>{{ message|length }} chars</div>
+                {% endif %} {% if latency_ms is defined %}
+                <div>Latency:</div>
+                <div>{{ latency_ms }} ms</div>
+                {% endif %}
+              </div>
+            </div>
+            {% endif %}
+          </section>
+          {% endif %} {% if model_results %}
+          <section class="compare">
+            <div class="sub" style="margin-bottom: 0.5rem">
+              Model comparison
+            </div>
+            <table>
+              <thead>
+                <tr>
+                  <th>Model</th>
+                  <th>Prediction</th>
+                  <th>Spam&nbsp;Prob.</th>
+                  <th>Acc</th>
+                  <th>Prec</th>
+                  <th>Recall</th>
+                  <th>F1</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for m in model_results %} {% set pp = (m.proba * 100) |
+                round(1) if m.proba is defined else None %}
+                <tr>
+                  <td>{{ m.name }}</td>
+                  <td>
+                    <span
+                      class="t-badge {% if m.label|lower == 'spam' %}t-spam{% else %}t-ham{% endif %}"
+                      >{{ m.label }}</span
+                    >
+                  </td>
+                  <td>
+                    {% if pp is not none %}{{ pp }}%{% else %}—{% endif %}
+                  </td>
+                  <td>
+                    {% if m.acc is defined %}{{ '%.3f'|format(m.acc) }}{% else
+                    %}—{% endif %}
+                  </td>
+                  <td>
+                    {% if m.prec is defined %}{{ '%.3f'|format(m.prec) }}{% else
+                    %}—{% endif %}
+                  </td>
+                  <td>
+                    {% if m.rec is defined %}{{ '%.3f'|format(m.rec) }}{% else
+                    %}—{% endif %}
+                  </td>
+                  <td>
+                    {% if m.f1 is defined %}{{ '%.3f'|format(m.f1) }}{% else
+                    %}—{% endif %}
+                  </td>
+                </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </section>
+          {% endif %}
+        </div>
+      </form>
+
+      <footer>
+        <div class="tiny">
+          This tool predicts whether an SMS is likely <em>Spam</em> or
+          <em>Ham</em>. Always verify sensitive messages independently.
+        </div>
+      </footer>
+    </main>
+
+    <script>
+      const form = document.getElementById("form");
+      const submitBtn = document.getElementById("submitBtn");
+      const btnText = document.getElementById("btnText");
+      const sp = document.getElementById("sp");
+      const clearBtn = document.getElementById("clearBtn");
+      const message = document.getElementById("message");
+
+      form.addEventListener("submit", () => {
+        submitBtn.disabled = true;
+        sp.style.display = "inline-block";
+        btnText.textContent = "Analyzing…";
+      });
+
+      clearBtn.addEventListener("click", () => {
+        message.value = "";
+        message.focus();
+      });
+
+      document.querySelectorAll(".chip").forEach((ch) => {
+        ch.addEventListener("click", () => {
+          message.value = ch.getAttribute("data-fill");
+          message.focus();
+        });
+      });
+    </script>
+  </body>
+</html>

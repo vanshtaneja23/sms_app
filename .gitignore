@@ -1,0 +1,10 @@
+
+__pycache__/
+*.pyc
+.DS_Store
+.venv/
+venv/
+.env
+# If you don't want to commit models, uncomment next lines
+# model-2.pkl
+# vectorizer.pkl

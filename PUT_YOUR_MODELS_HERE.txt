@@ -1,0 +1,1 @@
+Place model-2.pkl and vectorizer.pkl in the project root next to app.py before running locally or deploying.

@@ -1,0 +1,8 @@
+flask>=3.0.0,<4
+gunicorn>=21.2.0,<22
+werkzeug>=3.0.0,<4
+# Adjust these to match the versions you trained with to avoid pickle compatibility issues.
+scikit-learn==1.6.1
+numpy>=1.23
+scipy>=1.10
+joblib>=1.2
